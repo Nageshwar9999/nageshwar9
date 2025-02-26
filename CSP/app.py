@@ -1,7 +1,7 @@
 import secrets  # For generating a secure random key
 from flask import Flask, request, render_template, flash, redirect, url_for
-import requests
 import os
+from twilio.rest import Client  # Twilio library import
 
 # Initialize Flask app
 app = Flask(__name__)
@@ -15,7 +15,7 @@ TWILIO_AUTH_TOKEN = os.environ.get('TWILIO_AUTH_TOKEN')
 TWILIO_PHONE_NUMBER = os.environ.get('TWILIO_PHONE_NUMBER')
 
 # Dictionary to store phone numbers by city
-city_phone_dict = {"nandivada":["+919392118117"]}
+city_phone_dict = {"nandivada": ["+919392118117"]}
 
 # Function to add a phone number to the dictionary
 def add_phone_number(city, phone_number):
@@ -24,30 +24,29 @@ def add_phone_number(city, phone_number):
         city_phone_dict[city] = []
     city_phone_dict[city].append(phone_number.strip())
 
-# Function to send SMS via Twilio API
+# Function to send SMS via Twilio API using Twilio's Python SDK
 def send_sms_via_twilio(account_sid, auth_token, from_number, message_body, to_number):
-    twilio_url = f'https://api.twilio.com/2010-04-01/Accounts/{account_sid}/Messages.json'
-    data = {
-        'To': to_number,
-        'From': from_number,
-        'Body': message_body
-    }
-
     try:
-        response = requests.post(
-            twilio_url,
-            data=data,
-            auth=(account_sid, auth_token)
+        # Create a Twilio client
+        client = Client(account_sid, auth_token)
+
+        # Send the SMS
+        message = client.messages.create(
+            body=message_body,
+            from_=from_number,
+            to=to_number
         )
 
-        if response.status_code == 201:
+        # Check if the message was sent successfully
+        if message.sid:
             print(f"Message sent successfully to {to_number}")
             return True
         else:
-            print(f"Failed to send message to {to_number}: {response.text}")
+            print(f"Failed to send message to {to_number}")
             return False
-    except requests.exceptions.RequestException as e:
-        print(f"Request failed: {e}")
+
+    except Exception as e:
+        print(f"An error occurred: {e}")
         return False
 
 # Route to handle main functionality
